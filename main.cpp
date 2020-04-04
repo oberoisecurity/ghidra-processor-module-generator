@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
 {
     boost::program_options::options_description desc{"Ghidra Processor Module Generator"};
     boost::program_options::variables_map args;
+    vector<string> additionalRegisters; // list of additional registers passed in at the command line
     PARSED_DATA parsedData;
     bool skipInstructionCombining; // if set, skip attempting to combine instructions. Useful for debugging purposes.
     bool printRegistersOnly; // if set parse the instruction set and only display the registers. Useful for debugging purposes.
@@ -45,6 +46,7 @@ int main(int argc, char *argv[])
             ("print-registers-only", boost::program_options::bool_switch(&printRegistersOnly), "Only print parsed registers. Useful for debugging purposes. False by default")
             ("omit-opcodes", boost::program_options::bool_switch(&parsedData.omitOpcodes), "Don't print opcodes in the outputted .sla file. False by default")
             ("skip-instruction-combining", boost::program_options::bool_switch(&skipInstructionCombining), "Don't combine instructions. Useful for debugging purposes. False by default")
+            ("additional-registers,ar", boost::program_options::value<vector<string>>(&additionalRegisters)->multitoken(), "List of additional registers. Use this option if --print-registers-only is missing registers for your instruction set")
             ("help,h", "Help screen");
 
         store(parse_command_line(argc, argv, desc), args);
@@ -62,13 +64,10 @@ int main(int argc, char *argv[])
             return -1;
         }
 
-        if(args.count("endiannes") == 0)
+        if(parsedData.endian != "big" && parsedData.endian != "small")
         {
-            if(parsedData.endian != "big" && parsedData.endian != "small")
-            {
-                cout << "Processor endianness must be either big or small!!" << endl;
-                return -1;
-            }
+            cout << "Processor endianness must be either big or small!!" << endl;
+            return -1;
         }
     }
     catch (const boost::program_options::error &ex)
@@ -82,10 +81,10 @@ int main(int argc, char *argv[])
     //
     cout << "[*] Initializing default Ghidra registers" << endl;
 
-    result = initRegisters();
+    result = initRegisters(additionalRegisters);
     if(result != 0)
     {
-        cout << "[-] Failed ot initialize default Ghidra registers!!" << endl;
+        cout << "[-] Failed to initialize default Ghidra registers!!" << endl;
         goto CLEANUP;
     }
 

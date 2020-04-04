@@ -85,7 +85,7 @@ typedef struct _PARSED_DATA
 
 } PARSED_DATA, *PPARSED_DATA;
 
-int initRegisters(void);
+int initRegisters(vector<string>& additionalRegisters);
 bool isImmediate(string& str);
 bool isRegister(string& str);
 int parseInstructions(PARSED_DATA& parsedData);

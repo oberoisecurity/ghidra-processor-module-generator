@@ -16,16 +16,23 @@ extern const char* ALL_REGISTERS[];
 // Load all the registers extracted from Ghidra into a set
 // When parsing the instructions this is how we will tell the difference
 // between an instruction mnemonic versus a register
-int initRegisters(void)
+// additionalRegisters is a list of additional registers specified by the user
+// at the command line
+int initRegisters(vector<string>& additionalRegisters)
 {
     set<string>::iterator it;
 
     for(unsigned int i = 0; i < sizeof(ALL_REGISTERS)/sizeof(ALL_REGISTERS[0]); i++)
     {
-        const char* str = ALL_REGISTERS[i];
+        const char* reg = ALL_REGISTERS[i];
 
         // BUGBUG: bad alloc exception?
-        g_allRegisters.insert(str);
+        g_allRegisters.insert(reg);
+    }
+
+    for(auto additionalRegister : additionalRegisters)
+    {
+        g_allRegisters.insert(additionalRegister);
     }
 
     return 0;
