@@ -1,7 +1,7 @@
 //--------------------------------------------------------------------------------------
 // File: parser.h
 //
-// Parsing and combining the instructions. Definition for PARSED_DATA structure. 
+// Parsing and combining the instructions. Definition for PARSED_DATA structure.
 //
 // Copyright (c) Oberoi Security Solutions. All rights reserved.
 // Licensed under the Apache 2.0 License.
@@ -76,6 +76,9 @@ typedef struct _PARSED_DATA
 
     // alignment of the instruction set
     unsigned int alignment;
+
+    // bitness of the instruction set
+    unsigned int bitness;
 
     // whether or not display opcodes as comments in the outputted .sla file
     bool omitOpcodes;

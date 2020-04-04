@@ -122,13 +122,13 @@ int createLdefs(PARSED_DATA& parsedData)
     ofs << "<language_definitions>\n";
     ofs << "\t<language processor=\"" << parsedData.processorFamily << "\"\n";
     ofs << "\t          endian=\"" << parsedData.endian << "\"\n";
-    ofs << "\t          size=\"" << "32" << "\"\n";
+    ofs << "\t          size=\"" << parsedData.bitness << "\"\n";
     ofs << "\t          variant=\"" << parsedData.processorName << "\"\n";
     ofs << "\t          version=\"1.0\"\n";
     ofs << "\t          slafile=\"" << parsedData.processorName << ".sla\"\n";
     ofs << "\t          processorspec=\"" << parsedData.processorFamily << ".pspec\"\n";
-    ofs << "\t          id=\"" << parsedData.processorFamily << ":" << bigOrLittle << ":" << "32" << ":" << parsedData.processorName << "\">\n";
-    ofs << "\t\t<description>" << parsedData.processorFamily << " " << parsedData.processorName << " processor 32-bit " << bigOrLittle << "</description>\n";
+    ofs << "\t          id=\"" << parsedData.processorFamily << ":" << bigOrLittle << ":" << parsedData.bitness << ":" << parsedData.processorName << "\">\n";
+    ofs << "\t\t<description>" << parsedData.processorFamily << " " << parsedData.processorName << " processor " << parsedData.bitness << "-bit " << bigOrLittle << "</description>\n";
     ofs << "\t\t<compiler name=\"default\" spec=\"" << parsedData.processorFamily << ".cspec\" id=\"default\"/>\n";
     ofs << "\t</language>\n";
     ofs << "</language_definitions>\n";
@@ -298,7 +298,7 @@ string getOutputRegisters(PARSED_DATA& parsedData)
 }
 
 // outputs a list of the define token instructions for the processor module
-// ex: 
+// ex:
 //	imm_00_00 = (0, 0)
 //	simm_00_00 = (0, 0) signed
 //	imm_00_03 = (0, 3)
