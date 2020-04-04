@@ -30,7 +30,7 @@ bool isInstructionComponentFiller(string& str)
 }
 
 // simple utility to convert an ascii hex char to decimal
-int covertHexNibbletoInteger(unsigned char x)
+int convertHexNibbletoInteger(unsigned char x)
 {
     if(x >= '0' && x <= '9')
     {
@@ -104,8 +104,8 @@ void Instruction::setOpcode(const string &opcodeHexString)
     for(unsigned int i = 2; i < opcodeHexString.length(); i += 2)
     {
         // convert the hex string to a byte
-        high = covertHexNibbletoInteger(opcodeHexString[i]);
-        low = covertHexNibbletoInteger(opcodeHexString[i+1]);
+        high = convertHexNibbletoInteger(opcodeHexString[i]);
+        low = convertHexNibbletoInteger(opcodeHexString[i+1]);
 
         value = (high << 4) | low;
 
@@ -185,7 +185,7 @@ string Instruction::getInstructionOutputString()
 
 // loops through the instruction's components and generates the opcode string
 // example output: opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011
-// while looping through all instructions, it appends the tokenInstructions set 
+// while looping through all instructions, it appends the tokenInstructions set
 // the tokens it comes across
 string Instruction::getOpcodeOutputString(set<string>& tokenInstructions)
 {
@@ -390,7 +390,7 @@ bool Instruction::areInstructionComonentsEqual(Instruction* right)
 // If this function returns true, the combiner code will replace the instruction bit
 // with a 'a'
 // This function has issues with signed immediates. It interprets the "-" as a instruction piece
-// and not part of the immediate field. I don't have an easy way to fix this. 
+// and not part of the immediate field. I don't have an easy way to fix this.
 bool Instruction::areInstructionComonentsEqualExceptImmediate(Instruction* right, int* differencePosition)
 {
     vector<InstructionComponent> * a;
@@ -456,7 +456,7 @@ bool Instruction::areInstructionComonentsEqualExceptImmediate(Instruction* right
 // If this function returns true, the combiner code will replace the instruction bit
 // with a 'A'
 // This function has issues with signed immediates. It interprets the "-" as a instruction piece
-// and not part of the immediate field. I don't have an easy way to fix this. 
+// and not part of the immediate field. I don't have an easy way to fix this.
 bool Instruction::areInstructionComonentsEqualExceptRegister(Instruction* right, int* differencePosition)
 {
     vector<InstructionComponent> * a;
@@ -528,7 +528,7 @@ int Instruction::generateAttachedRegisters(string opcode, unsigned int regStart,
             opcode[i] = '0';
         }
     }
-    
+
     // number of iterations for the loop
     unsigned int numIterations = (1 << (regEnd - regStart));
 
@@ -594,7 +594,7 @@ int Instruction::computeAttachVariables(map<string, Instruction*>& allInstructio
 
             string registerName;
             string foundRegisters;
-            
+
             // generate a list of all attached registers
             int result = generateAttachedRegisters(this->opcode, bitStart, bitStart + opcodeComponent.length(), allInstructions, registerName, foundRegisters);
             if(result != 0)

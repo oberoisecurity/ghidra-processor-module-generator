@@ -45,7 +45,7 @@ class Instruction
         // BUGBUG: do I really need this??
         bool getCombined(void);
         void setCombined(bool isCombined);
-        
+
         // adds a new instruction component to the instruction
         void addComponent(const InstructionComponentType newType, const string &newComponent);
 
@@ -55,7 +55,7 @@ class Instruction
         string getOpcodeOutputString(set<string>& tokenInstructions);
 
         // basic checks that the instruction is sane
-        bool validateInstruction(void);        
+        bool validateInstruction(void);
 
         // tests to check if two instruction can be combined
         bool areInstructionComonentsEqual(Instruction* right);
@@ -76,5 +76,5 @@ class Instruction
 
 // misc utility functions used by the Instruction class
 // BUGBUG: should this be a part of the class??
-int covertHexNibbletoInteger(unsigned char x);
+int convertHexNibbletoInteger(unsigned char x);
 bool isInstructionComponentFiller(string& str);
