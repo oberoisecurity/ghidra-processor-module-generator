@@ -65,16 +65,26 @@ bool isOpcode(string& str)
     return result;
 }
 
-// returns true if the passed in string is an immediate
-// We determine a string is an opcode if it is a hex string beginning with 0x
-bool isImmediate(string& str)
+// returns true if the passed in string is an integer
+bool isInteger(string &str)
 {
     bool result;
-    boost::regex expr{"0[xX][0-9a-fA-F]+"};
+    boost::regex expr{"[0-9]+"};
 
     result = boost::regex_match(str, expr);
 
     return result;
+}
+
+// an immediate is a hex string or decimal string
+bool isImmediate(string& str)
+{
+	if(isOpcode(str) || isInteger(str))
+	{
+		return true;
+	}
+
+	return false;
 }
 
 // tokenizes the input instructions and appends them to the allInstructions set

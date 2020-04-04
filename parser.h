@@ -86,6 +86,8 @@ typedef struct _PARSED_DATA
 } PARSED_DATA, *PPARSED_DATA;
 
 int initRegisters(vector<string>& additionalRegisters);
+bool isOpcode(string& str);
+bool isInteger(string &str);
 bool isImmediate(string& str);
 bool isRegister(string& str);
 int parseInstructions(PARSED_DATA& parsedData);
