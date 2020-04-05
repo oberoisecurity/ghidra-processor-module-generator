@@ -31,6 +31,7 @@ class InstructionComponent
         // BUGBUG: should these really be public? I'm treating InstructionComponent more as struct than as a class
         InstructionComponentType type;
         string component;
+        string combinedComponent;
 };
 
 class Instruction
@@ -51,7 +52,7 @@ class Instruction
 
         // prints the instruction
         string printInstruction(set<string>& tokenInstructions);
-        string getInstructionOutputString();
+        string getInstructionOutputString(bool getCombined);
         string getOpcodeOutputString(set<string>& tokenInstructions);
 
         // basic checks that the instruction is sane

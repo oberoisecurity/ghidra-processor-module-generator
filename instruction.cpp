@@ -154,7 +154,7 @@ void Instruction::addComponent(const InstructionComponentType newType, const str
 
 // loops through the instruction's components and generates an instruction string
 // example output: xtrct regA_04_07, regC_08_11
-string Instruction::getInstructionOutputString()
+string Instruction::getInstructionOutputString(bool getCombined)
 {
     string output;
 
@@ -167,7 +167,16 @@ string Instruction::getInstructionOutputString()
             boost::trim(output);
         }
 
-        output += it->component;
+        if(getCombined && it->combinedComponent.length() > 0)
+        {
+            // the instruction has a combined component
+            output += it->combinedComponent;
+        }
+        else
+        {
+            // the instruction does not have a combined component or the caller wants the original instruction
+            output += it->component;
+        }
 
         if(isInstructionComponentFiller(it->component) || it->type == TYPE_REGISTER)
         {
@@ -222,7 +231,14 @@ string Instruction::getOpcodeOutputString(set<string>& tokenInstructions)
         {
             int regPos = opcodeString[0] - 'A' + 1;
 
-            opcodeName = this->components[regPos].component;
+            if(this->components[regPos].combinedComponent.length() > 0)
+            {
+                opcodeName = this->components[regPos].combinedComponent;
+            }
+            else
+            {
+                opcodeName = this->components[regPos].component;
+            }
             snprintf(opcodeNameBuf, sizeof(opcodeNameBuf)-1, "%s", opcodeName.c_str());
             temp += string(opcodeNameBuf) + " ";
 
@@ -253,29 +269,41 @@ string Instruction::getOpcodeOutputString(set<string>& tokenInstructions)
     // if there are registers, add them to the "is" section
     for (std::vector<InstructionComponent>::iterator it = this->components.begin(); it != this->components.end(); ++it)
     {
+        string reg;
+        
         if(it->type != TYPE_REGISTER)
         {
             continue;
         }
+        
+        if(it->combinedComponent.length() > 0)
+        {  
+            reg = it->combinedComponent;
+        }
+        else
+        {
+            reg = it->component;
+        }
 
         // make sure we haven't already seen printed this registers
-        if(outputtedRegisters.find(it->component) != outputtedRegisters.end())
+        if(outputtedRegisters.find(reg) != outputtedRegisters.end())
         {
             // already saw this register, skip it
             continue;
         }
-
-        outputtedRegisters.insert(it->component);
+        
+        outputtedRegisters.insert(reg);
 
         if(isFirst == false)
         {
             output += "& ";
         }
 
-        output += it->component += " ";
+        output += reg += " ";
         isFirst = false;
     }
 
+    boost::trim_right(output);
     return output;
 }
 
@@ -639,7 +667,7 @@ int Instruction::computeAttachVariables(map<string, Instruction*>& allInstructio
                     }
                 }
             }
-            this->components[position].component = registerName;
+            this->components[position].combinedComponent = registerName;            
         }
         // replace immediate values as well
         else if(opcodeComponent[0] >= 'a' && opcodeComponent[0] <= 'z')
@@ -651,7 +679,7 @@ int Instruction::computeAttachVariables(map<string, Instruction*>& allInstructio
             snprintf(immediateName, sizeof(immediateName) - 1, "imm_%02d_%02d", immStart, immEnd);
 
             position = opcodeComponent[0] - 'a'  + 1;
-            this->components[position].component = string(immediateName);
+            this->components[position].combinedComponent = string(immediateName);
         }
 
         bitStart += opcodeComponent.length();

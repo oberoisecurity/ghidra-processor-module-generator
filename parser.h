@@ -81,7 +81,12 @@ typedef struct _PARSED_DATA
     unsigned int bitness;
 
     // whether or not display opcodes as comments in the outputted .sla file
+    // useful for debugging
     bool omitOpcodes;
+    
+    // whether or not display an example combined instruction as comments in the outputted .sla file
+    // useful for debugging
+    bool omitExampleInstructions;
 
 } PARSED_DATA, *PPARSED_DATA;
 

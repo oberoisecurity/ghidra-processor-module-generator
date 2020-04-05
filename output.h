@@ -23,3 +23,4 @@ string getOutputRegisters(PARSED_DATA& parsedData);
 string getOutputTokenInstructions(PARSED_DATA& parsedData);
 string getOutputAttachVariables(PARSED_DATA& parsedData);
 string getOutputInstruction(Instruction* instruction, PARSED_DATA& parserData);
+string getOriginalOutputString(Instruction* instruction, PARSED_DATA& parsedData);
