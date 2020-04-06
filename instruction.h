@@ -50,6 +50,10 @@ class Instruction
         // adds a new instruction component to the instruction
         void addComponent(const InstructionComponentType newType, const string &newComponent);
 
+        // helper functions for identifying combined bits by letters
+        char getComponentLetterFromPosition(const InstructionComponentType type, const unsigned int componentPosition);
+        unsigned int getComponentPositionFromLetter(const char componentLetter);
+
         // prints the instruction
         string printInstruction(set<string>& tokenInstructions);
         string getInstructionOutputString(bool getCombined);
@@ -61,6 +65,7 @@ class Instruction
         // tests to check if two instruction can be combined
         bool areInstructionComonentsEqual(Instruction* right);
         bool areInstructionComonentsEqualExceptImmediate(Instruction* right, int* differencePosition);
+        bool areInstructionComonentsEqualExceptNegativeSign(Instruction* right, int* differencePosition);
         bool areInstructionComonentsEqualExceptRegister(Instruction* right, int* differencePosition);
 
         // for creating the .slaspec

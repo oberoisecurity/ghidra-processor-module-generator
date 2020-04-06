@@ -229,7 +229,7 @@ string Instruction::getOpcodeOutputString(set<string>& tokenInstructions)
         }
         else if(opcodeString[0] >= 'A' && opcodeString[0] <= 'Z')
         {
-            int regPos = opcodeString[0] - 'A' + 1;
+            unsigned int regPos = this->getComponentPositionFromLetter(opcodeString[0]);
 
             if(this->components[regPos].combinedComponent.length() > 0)
             {
@@ -270,14 +270,14 @@ string Instruction::getOpcodeOutputString(set<string>& tokenInstructions)
     for (std::vector<InstructionComponent>::iterator it = this->components.begin(); it != this->components.end(); ++it)
     {
         string reg;
-        
+
         if(it->type != TYPE_REGISTER)
         {
             continue;
         }
-        
+
         if(it->combinedComponent.length() > 0)
-        {  
+        {
             reg = it->combinedComponent;
         }
         else
@@ -291,7 +291,7 @@ string Instruction::getOpcodeOutputString(set<string>& tokenInstructions)
             // already saw this register, skip it
             continue;
         }
-        
+
         outputtedRegisters.insert(reg);
 
         if(isFirst == false)
@@ -474,6 +474,96 @@ bool Instruction::areInstructionComonentsEqualExceptImmediate(Instruction* right
     return true;
 }
 
+// returns true if two instructions are equal except for a single negative sign
+// For an instruction to be equal:
+// - one instruction must have an additional negative sign
+// - in the same order
+// - of the same type
+// - with the same immediate, register, and instruction values
+// - and a single immediate field must be different
+// If this function returns true, the combiner code will replace the instruction bit
+// with a 'a'
+bool Instruction::areInstructionComonentsEqualExceptNegativeSign(Instruction* right, int* differencePosition)
+{
+    vector<InstructionComponent> * a;
+    vector<InstructionComponent> * b;
+
+    int numDifferences = 0;
+    int negativeA = 0;
+    int negativeB = 0;
+
+    a = &this->components;
+    b = &right->components;
+
+    // fast fail if the number of components are different
+    if((a->size() + 1) != b->size() && (a->size() - 1) != b->size())
+    {
+        return false;
+    }
+
+    // sizes are the same, now loop through each of the components
+    for(unsigned int i = 0; i < a->size(); i++)
+    {
+        // check if the components are of the same type
+        if(a->at(i + negativeA).type != b->at(i + negativeB).type)
+        {
+            // we have the first non-match, check if one is a "-" and the other is an immediate
+            if((a->at(i + negativeA).type == TYPE_IMMEDIATE) &&
+               (b->at(i + negativeB).type == TYPE_INSTRUCTION) &&
+               (b->at(i + negativeB).component == "-"))
+               {
+                    i--;
+                    negativeB++;
+                    *differencePosition = i;
+                    continue;
+            }
+            else if((b->at(i + negativeB).type == TYPE_IMMEDIATE) &&
+                   (a->at(i + negativeA).type == TYPE_INSTRUCTION) &&
+                   (a->at(i + negativeA).component == "-"))
+               {
+                    negativeB--;
+                    *differencePosition = i;
+                    continue;
+               }
+
+            // an element type is different, fail
+            return false;
+        }
+
+        // same type, check if the values are the same
+        if(a->at(i + negativeA).component != b->at(i + negativeB).component)
+        {
+            // check if the difference was an immediate field
+            if(a->at(i + negativeA).type == TYPE_IMMEDIATE)
+            {
+                // difference was an register field, make sure this is our only one
+                if(numDifferences == 0)
+                {
+                    numDifferences++;
+                    *differencePosition = i;
+                    continue;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    if((negativeA || negativeB) && numDifferences == 0)
+    {
+        return true;
+    }
+
+    // There must have been atleast one difference
+    // we check if it's in the immediate field
+    if(numDifferences != 1)
+    {
+        return false;
+    }
+
+    return true;
+}
+
 // returns true if two instructions are equal except for a single register field
 // For an instruction to be equal:
 // - there must be the same number of components
@@ -529,6 +619,11 @@ bool Instruction::areInstructionComonentsEqualExceptRegister(Instruction* right,
         }
     }
 
+    if(numDifferences == 0)
+    {
+        cout << "0 differences!!" << endl;
+    }
+
     // There must have been atleast one difference
     // we check if it's in the register field
     if(numDifferences != 1)
@@ -545,7 +640,7 @@ bool Instruction::areInstructionComonentsEqualExceptRegister(Instruction* right,
 // returns a string of registers in foundRegister on success
 int Instruction::generateAttachedRegisters(string opcode, unsigned int regStart, unsigned int regEnd, map<string, Instruction*> allInstructions, string& registerName, string& foundRegisters)
 {
-    int registerPosition = opcode[regStart] - 'A' + 1;
+    int registerPosition = this->getComponentPositionFromLetter(opcode[regStart]);
 
     // zero out all the non-register regions
     for(unsigned int i = 0; i < opcode.length(); i++)
@@ -618,7 +713,7 @@ int Instruction::computeAttachVariables(map<string, Instruction*>& allInstructio
         // only register components have attach variables
         if(opcodeComponent[0] >= 'A' && opcodeComponent[0] <= 'Z')
         {
-            position = opcodeComponent[0] - 'A'  + 1;
+            position = this->getComponentPositionFromLetter(opcodeComponent[0]);
 
             string registerName;
             string foundRegisters;
@@ -667,7 +762,7 @@ int Instruction::computeAttachVariables(map<string, Instruction*>& allInstructio
                     }
                 }
             }
-            this->components[position].combinedComponent = registerName;            
+            this->components[position].combinedComponent = registerName;
         }
         // replace immediate values as well
         else if(opcodeComponent[0] >= 'a' && opcodeComponent[0] <= 'z')
@@ -678,7 +773,7 @@ int Instruction::computeAttachVariables(map<string, Instruction*>& allInstructio
             int immStart = immEnd - opcodeComponent.length() + 1;
             snprintf(immediateName, sizeof(immediateName) - 1, "imm_%02d_%02d", immStart, immEnd);
 
-            position = opcodeComponent[0] - 'a'  + 1;
+            position = this->getComponentPositionFromLetter(opcodeComponent[0]);
             this->components[position].combinedComponent = string(immediateName);
         }
 
@@ -686,4 +781,70 @@ int Instruction::computeAttachVariables(map<string, Instruction*>& allInstructio
     }
 
     return 0;
+}
+
+char Instruction::getComponentLetterFromPosition(const InstructionComponentType type, const unsigned int componentPosition)
+{
+    int count = 0;
+
+    if(componentPosition >= this->components.size())
+    {
+        return -1;
+    }
+
+    for(unsigned int i = 0; i < componentPosition && i < this->components.size(); i++)
+    {
+        if(this->components[i].type == type)
+        {
+            count++;
+        }
+    }
+
+    if(type == TYPE_REGISTER)
+    {
+        return 'A' + count;
+    }
+    else if(type == TYPE_IMMEDIATE)
+    {
+        return 'a' + count;
+    }
+
+    return -1;
+}
+
+unsigned int Instruction::getComponentPositionFromLetter(const char componentLetter)
+{
+    InstructionComponentType type;
+    unsigned int count = 0;
+
+    if(componentLetter >= 'A' && componentLetter <= 'Z')
+    {
+        type = TYPE_REGISTER;
+        count = componentLetter - 'A';
+    }
+    else if(componentLetter >= 'a' && componentLetter <= 'z')
+    {
+        type = TYPE_IMMEDIATE;
+        count = componentLetter - 'a';
+    }
+    else
+    {
+        cout << "Invalid component letter!!" << endl;
+        throw -1;
+    }
+
+    for(unsigned int i = 0; i < this->components.size(); i++)
+    {
+        if(this->components[i].type == type)
+        {
+            if(count == 0)
+            {
+                return i;
+            }
+            count--;
+        }
+    }
+
+    cout << "Invalid component count!!" << endl;
+    throw -2;
 }

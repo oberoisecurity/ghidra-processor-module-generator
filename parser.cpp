@@ -302,11 +302,15 @@ void combineInstructions(PARSED_DATA& parsedData, COMBINE_TYPE combineType)
                         break;
                     case COMBINE_IMMEDIATES:
                         isEqual = currItr->second->areInstructionComonentsEqualExceptImmediate(tempItr->second, &differencePosition);
-                        replacementChar = 'a' + differencePosition - 1;
+                        if(isEqual == false)
+                        {
+                            isEqual = currItr->second->areInstructionComonentsEqualExceptNegativeSign(tempItr->second, &differencePosition);
+                        }
+                        replacementChar = currItr->second->getComponentLetterFromPosition(TYPE_IMMEDIATE, differencePosition);
                         break;
                     case COMBINE_REGISTERS:
                         isEqual = currItr->second->areInstructionComonentsEqualExceptRegister(tempItr->second, &differencePosition);
-                        replacementChar = 'A' + differencePosition - 1;
+                        replacementChar = currItr->second->getComponentLetterFromPosition(TYPE_REGISTER, differencePosition);
                         break;
                     default:
                         // BUGBUG: handle errors gracefully
