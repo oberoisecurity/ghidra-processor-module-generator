@@ -29,11 +29,11 @@ The outputted processor module will be able to disassemble for your given archit
 > 0xEFFF mov #-0x1,r15  
 
 Exclude any invalid instructions. The opcode must begin with 0x and must be byte aligned.  
-2) Run GPMG with `gpmg --input-file instructions.txt --print-registers-only` flag. This flag parses all the instructions and will print out only the registers. Verify the output is correct before proceeding.  
+2) Run GPMG with `gpmg --input-file examples/sh-2.txt --print-registers-only` flag. This flag parses all the instructions and will print out only the registers. Verify the output is correct before proceeding.  
 
 Ex:  
 
-> ./gpmg --input-file sh2all_0.txt  --print-registers-only  
+> ./gpmg --input-file examples/sh-2.txt --print-registers-only  
 > Ghidra Processor Module Generator (GPMG)  
 > [\*] Initializing default Ghidra registers  
 > [\*] Parsing instructions  
@@ -41,9 +41,9 @@ Ex:
 > [\*] Found registers: gbr mach macl pc pr r0 r1 r10 r11 r12 r13 r14 r15 r2 r3 r4 r5 r6 r7 r8 r9 sr vbr  
 > If there are any issues edit registers.h before proceeding.  
 
-3) If the registers list is incorrect, add/remove registers from registers.h and re-compile. If the registers are incorrect GPMG will not work.  
+3) If the registers list is incorrect, use the `--additional-registers` command line option to add registers. Or you can manually edit registers.h and re-compile. If the registers are incorrect GPMG will not work.  
 4) Now you are ready to run GPMG: `./gpmg --input-file instructions.txt --processor-name MyProcessor --processor-family ProcessorFamily --endian big --alignment 2`. If all goes well GPMG should create a "MyProcessor" directory with all of the required files.  
-5) Verify that the created processor module directory is valid and compiles with Ghidra's SLEIGH compiler. The SLEIGH compiler script can be found in `ghidra/support/`. Run `sleigh -a <path_to_MyProcessor_dir>`. There should be warnings about unimplemented p-code instructions but otherwise there should be no issues. If the compilation step fails, please submit an issue and upload your instructions.txt file and I will take a look at it.  
+5) Verify that the created processor module directory is valid and compiles with Ghidra's SLEIGH compiler. The SLEIGH compiler script can be found in `ghidra/support/`. Run `sleigh -a <path_to_MyProcessorFamily_dir>`. There should be warnings about unimplemented p-code instructions but otherwise there should be no issues. If the compilation step fails, please submit an issue and upload your instructions.txt file and I will take a look at it.  
 
 Ex:  
 > <path_to_ghidra>/ghidra/support/sleigh -a MyProcFamily/  
@@ -53,22 +53,22 @@ Ex:
 >  
 > 1 languages successfully compiled  
 
-6) If the processor successfully compiled you should be able to copy your MyProcessor directory to `<path_to_ghidra>/Ghidra/Processors/` directory. When you restart Ghidra your new processor should be listed.  Make sure you open your binary as "raw" and manually select your processor module.  
+6) Now that you've compiled your processor module, you can run `gpmg-validator` to disassemble your input file and diff the results. This will help you find which instructions require modifications. Run with: `./gpmg-validator --input-file examples/sh2.txt --sla-file MyProcFamily/data/languages/MyProc.sla --output-file output.txt`. Diff the input file and the output file to find issues. If you find issues, manually correct the .slaspec and recompile with Ghidra's sleigh compiler.  
+7) If the processor successfully compiled you should be able to copy your MyProcessor directory to `<path_to_ghidra>/Ghidra/Processors/` directory. When you restart Ghidra your new processor should be listed. Make sure you open your binary as "raw" and manually select your processor module.  
 
 ## Manual Next Steps (See Existing Processors for Examples):
 Now that you have verified Ghidra can load your processor module you can begin implementing p-code and other changes to get the decompiler to work.
 
 1) Edit the .pspec, .cspec, .ldef files.  
-2) Edit the .slaspec file. Manually combine instructions which should be signed immediates. Rename registers to make more sense. If an instruction uses an immediate and modifies it before displaying you will have to edit the instruction.  
+2) Edit the .slaspec file. Rename registers to make more sense. If an instruction uses an immediate and modifies it before displaying you will have to edit the instruction.  
 3) Implement p-code for all of the instructions in the .slaspec file to get decompiler support.  
 
 ## Issues
 * Will choke on instruction sets that are more than 3 bytes long
-* Display fields for immediates aren't handled
-* Signed and unsigned immediates are not combined.
-* Not tested with floating point
-* Doesn't work with PC relative addressing. Will require manual fix-ups.
+* Display fields for immediates aren't handled. gpmg-validator will help show you these. 
+* Doesn't work with PC relative addressing. Will require manual fix-ups. gpmg-validator will help show you these. 
 * Won't work on instruction sets where bitfields are not contigious. Example if bits 0-2 and 4-6 are combined to compute an immediate value.
+* Not tested with floating point
 
 Please attach your input file when creating an issue.
 
@@ -77,7 +77,8 @@ Please attach your input file when creating an issue.
 * Add support for specifying bit patterns as input
 
 ## Build
-run `make`
+`make gpmg`  
+`make gpmg-validator GHIDRA_TRUNK=<path_to_Ghidra_trunk>` (requires Ghidra's decopmiler headers and libsla.a. GHIDRA_TRUNK points to a clone of Ghidra from trunk, not a release build of Ghidra)
 
 ### Build Dependencies
 libboost-dev  
@@ -85,6 +86,13 @@ libboost-filesystem-dev
 libboost-program-options-dev  
 libboost-regex-dev  
 libboost-system-dev  
+libsla.a (only needed for gpmg-validator)
+
+#### Building libsla.a
+If you want to use gpmg-validator to validate your processor module against your input file, you will need to build Ghidra's libsla.
+1) Checkout Ghidra from trunk. A release build of Ghidra is not sufficient. `git clone https://github.com/NationalSecurityAgency/ghidra` This path will be your GHIDRA_TRUNK directory. 
+2) CD to the decompiler source directory: `cd ~/ghidra/Ghidra/Features/Decompiler/src/decompile/cpp`
+3) Compile: `make libsla.a`
 
 ## License
 Licensed under the Apache 2.0 license. See LICENSE.
