@@ -11,7 +11,6 @@
 #include <boost/asio/thread_pool.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <valgrind/callgrind.h>
 #include "parser.h"
 #include "registers.h"
 #include "thread_pool.h"
