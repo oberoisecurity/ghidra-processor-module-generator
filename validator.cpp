@@ -1,11 +1,11 @@
-//--------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // File: validator.cpp
 //
 // Handles command line argument parsing invoking the disassembly routine.
 //
 // Copyright (c) Oberoi Security Solutions. All rights reserved.
 // Licensed under the Apache 2.0 License.
-//--------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
 #include <iostream>
 #include <boost/algorithm/string.hpp>
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     string slaFilename;
     int result = 0;
 
-    cout << "Ghidra Processor Module Generator (GPMG) Validator" << endl;
+    cout << "Ghidra Processor Module Generator Validator" << endl;
 
     //
     // command line arg parsing

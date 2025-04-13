@@ -1,18 +1,19 @@
-//--------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // File: output.cpp
 //
 // Outputs the files that comprise the Ghidra processor module.
 //
 // Copyright (c) Oberoi Security Solutions. All rights reserved.
 // Licensed under the Apache 2.0 License.
-//--------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
+#include <boost/timer/timer.hpp>
 #include "output.h"
 
 #include <boost/filesystem.hpp>
 
-// creates the directory structure required by the processor
-// processor specs must be in the <ProcessorFamily>/data/languages/ directory structure
+// Creates the directory structure required by the processor spec. Processor 
+// specs must be in the <ProcessorFamily>/data/languages/ directory structure
 int createDirectoryStructure(PARSED_DATA& parsedData)
 {
     bool result = false;
@@ -40,8 +41,8 @@ int createDirectoryStructure(PARSED_DATA& parsedData)
     return 0;
 }
 
-// creates an empty Module.manifest inside the <ProcessorFamily> directory
-// unsure why this is required by Ghidra
+// Creates an empty Module.manifest inside the <ProcessorFamily> directory.
+// Unsure why this is required by Ghidra
 // <ProcessorFamily>/Module.manifest
 int createModuleManifest(PARSED_DATA& parsedData)
 {
@@ -56,8 +57,9 @@ int createModuleManifest(PARSED_DATA& parsedData)
     return 0;
 }
 
-// creates the bare minimum processor cspec file required to be loaded into Ghidra
-// It is up to the enduser to fully define this file to get decompiler support to work
+// Creates the bare minimum processor cspec file required to be loaded into
+// Ghidra. It is up to the enduser to fully define this file to get decompiler
+// support to work
 // <ProcessorFamily>/data/languages/<Processor>.cspec
 int createCspec(PARSED_DATA& parsedData)
 {
@@ -89,11 +91,12 @@ int createCspec(PARSED_DATA& parsedData)
     return 0;
 }
 
-// creates the bare minimum processor ldefs file required to be loaded into Ghidra
-// Uses values passed in at the command line to fill out the file
+// creates the bare minimum processor ldefs file required to be loaded into
+// Ghidra. Uses values passed in at the command line to fill out the file.
 // <ProcessorFamily>/data/languages/<Processor>.ldefs
 int createLdefs(PARSED_DATA& parsedData)
 {
+    boost::timer::auto_cpu_timer t;
     string ldefsFilename;
     string bigOrLittle;
 
@@ -107,7 +110,7 @@ int createLdefs(PARSED_DATA& parsedData)
 
     boost::filesystem::ofstream ofs(p);
 
-    if(parsedData.endian == "big")
+    if(parsedData.endianness == "big")
     {
         bigOrLittle = "BE";
     }
@@ -120,26 +123,40 @@ int createLdefs(PARSED_DATA& parsedData)
     ofs << "\n";
     ofs << "<!-- TODO: sanity check these values -->\n";
     ofs << "<language_definitions>\n";
-    ofs << "\t<language processor=\"" << parsedData.processorFamily << "\"\n";
-    ofs << "\t          endian=\"" << parsedData.endian << "\"\n";
-    ofs << "\t          size=\"" << parsedData.bitness << "\"\n";
-    ofs << "\t          variant=\"" << parsedData.processorName << "\"\n";
-    ofs << "\t          version=\"1.0\"\n";
-    ofs << "\t          slafile=\"" << parsedData.processorName << ".sla\"\n";
-    ofs << "\t          processorspec=\"" << parsedData.processorFamily << ".pspec\"\n";
-    ofs << "\t          id=\"" << parsedData.processorFamily << ":" << bigOrLittle << ":" << parsedData.bitness << ":" << parsedData.processorName << "\">\n";
-    ofs << "\t\t<description>" << parsedData.processorFamily << " " << parsedData.processorName << " processor " << parsedData.bitness << "-bit " << bigOrLittle << "</description>\n";
-    ofs << "\t\t<compiler name=\"default\" spec=\"" << parsedData.processorFamily << ".cspec\" id=\"default\"/>\n";
-    ofs << "\t</language>\n";
-    ofs << "</language_definitions>\n";
 
+    for(unsigned int i = 0; i < parsedData.inputFilenames.size(); i++)
+    {
+        ofs << "\t<language processor=\"" << parsedData.processorFamily << "\"\n";
+        ofs << "\t          endian=\"" << parsedData.endianness << "\"\n";
+        ofs << "\t          size=\"" << parsedData.bitness << "\"\n";
+        ofs << "\t          variant=\"" << parsedData.processorName << "\"\n";
+        ofs << "\t          version=\"1.0\"\n";
+
+        if(i == 0)
+        {
+            ofs << "\t          slafile=\"" << parsedData.processorName << ".sla\"\n";
+        }
+        else
+        {
+            ofs << "\t          slafile=\"" << parsedData.processorName << to_string(i) << ".sla\"\n";
+        }
+
+        ofs << "\t          processorspec=\"" << parsedData.processorFamily << ".pspec\"\n";
+        ofs << "\t          id=\"" << parsedData.processorFamily << ":" << bigOrLittle << ":" << parsedData.bitness << ":" << parsedData.processorName << "\">\n";
+        ofs << "\t\t<description>" << parsedData.processorFamily << " " << parsedData.processorName << " processor " << parsedData.bitness << "-bit " << bigOrLittle << "</description>\n";
+        ofs << "\t\t<compiler name=\"default\" spec=\"" << parsedData.processorFamily << ".cspec\" id=\"default\"/>\n";
+        ofs << "\t</language>\n";
+    }
+    ofs << "</language_definitions>\n";
+    
     ofs.close();
 
     return 0;
 }
 
-// creates the bare minimum processor pspec file required to be loaded into Ghidra
-// It is up to the enduser to fully define this file to get decompiler support to work
+// Creates the bare minimum processor pspec file required to be loaded into
+// Ghidra. It is up to the enduser to fully define this file to get decompiler
+// support to work
 // <ProcessorFamily>/data/languages/<Processor>.pspec
 int createPspec(PARSED_DATA& parsedData)
 {
@@ -170,13 +187,20 @@ int createPspec(PARSED_DATA& parsedData)
 // the core of the processor module. This file contains all of the registers,
 // defined tokens, and instructions of the instruction set
 // <ProcessorFamily>/data/languages/<Processor>.slaspec
-int createSlaspec(PARSED_DATA& parsedData)
+int createSlaspec(PARSED_DATA& parsedData, unsigned int fileId)
 {
     string pspecFilename;
 
     boost::filesystem::path p{parsedData.processorFamily};
 
-    pspecFilename = parsedData.processorName + ".slaspec";
+    if(fileId == 0)
+    {
+        pspecFilename = parsedData.processorName + ".slaspec";
+    }
+    else
+    {
+        pspecFilename = parsedData.processorName + to_string(fileId) + ".slaspec";
+    }
 
     p.append("data");
     p.append("languages");
@@ -184,13 +208,13 @@ int createSlaspec(PARSED_DATA& parsedData)
 
     boost::filesystem::ofstream ofs(p);
 
-    ofs << "# File autogenerated by Ghidra Processor Module Generator Generator (GPMG)\n";
+    ofs << "# File autogenerated by Ghidra Processor Module Generator\n";
     ofs << "# https://github.com/oberoisecurity/ghidra-processor-module-generator\n";
     ofs << "\n";
 
     // endianness and alignment
     ofs << "# TODO: Verify these\n";
-    ofs << "define endian=" << parsedData.endian << ";\n";
+    ofs << "define endian=" << parsedData.endianness << ";\n";
     ofs << "define alignment=" << parsedData.alignment << ";\n";
     ofs << "\n";
 
@@ -215,14 +239,25 @@ int createSlaspec(PARSED_DATA& parsedData)
     ofs << "\n";
 
     // define token registers
-    if(parsedData.tokenInstructions.size() > 0)
+    for(unsigned int i = 0; i < sizeof(parsedData.tokenInstructions)/sizeof(parsedData.tokenInstructions[0]); i++)
     {
-        ofs << "# TODO: Simplify these where possible\n";
-        ofs << "# TODO: Combine signed immediates where it makes sense\n";
-        ofs << "define token instr(" << parsedData.maxOpcodeBits << ")\n";
-        ofs << getOutputTokenInstructions(parsedData);
-        ofs << ";\n";
-        ofs << "\n";
+        unsigned int opcodeBitSize = 0;
+
+        if(parsedData.tokenInstructions[i].size() > 0)
+        {
+            opcodeBitSize = (i + 1) * 8;
+
+            ofs << "# TODO: Simplify these where possible\n";
+            ofs << "# TODO: Combine signed immediates where it makes sense\n";
+            ofs << "define token instr" << opcodeBitSize;
+
+            // TODO: make if statement here for VLA
+
+            ofs << "(" << opcodeBitSize << ")\n";
+            ofs << getOutputTokenInstructions(parsedData.tokenInstructions[i]);
+            ofs << ";\n";
+            ofs << "\n";
+        }
     }
 
     // attach variables
@@ -233,11 +268,49 @@ int createSlaspec(PARSED_DATA& parsedData)
         ofs << "\n";
     }
 
+    // check if any instructions have duplicated registers
+    // we need to zero for every slaspec file
+    // or we can run into export statements that fail
+    // to compile in the SLEIGH compiler
+    parsedData.duplicatedRegisters.clear(); 
+    for(auto& combinedInstruction: parsedData.combinedInstructions)
+    {
+        // combinedInstruction.first = the opcode
+        // combinedInstruction.second = pointer to the Instruction
+        combinedInstruction.second->getInstructionDuplicatedRegisters(true,
+                                                                      parsedData.duplicatedRegisters);    
+    }
+
+    if(parsedData.duplicatedRegisters.size() > 0)
+    {
+        ofs << "# Duplicated registers" << endl;
+        ofs << "# To workaround: https://github.com/NationalSecurityAgency/ghidra/issues/6874" << endl;
+        ofs << getOutputDuplicateRegisters(parsedData);
+        ofs << "\n";
+    }   
+
     //
     // Instructions
     //
     ofs << "#\n";
     ofs << "# Instructions\n";
+    ofs << "#\n\n";
+
+    ofs << "#\n";
+    ofs << "# Example Instruction:\n";
+    ofs << "#\n";
+    ofs << "# 1) # BBBBBAAAAAaaaaaaaaaaaaaa00000100\n";
+    ofs << "# 2) # addi r0,r0,0x0\n";
+    ofs << "# 3) #:addi regA_22_26,regB_27_31,imm_08_21 is regB_27_31 & regA_22_26 & imm_08_21 & opcode_00_05=0b000100\n";
+    ofs << "# 4) {}\n";
+    ofs << "#\n";
+    ofs << "# Line one is the opcode written in bits from MSB to LSB\n";
+    ofs << "# - 0 and 1s represent bits of the opcode that are required and cannot change\n";
+    ofs << "# - upper case letters represent registers\n";
+    ofs << "# - lower case letters represent immediate values\n";
+    ofs << "# Line two is an example decoding of the instruction if all registers and immediates are set to 0\n";
+    ofs << "# Line three is the SLEIGH encoded instruction\n";
+    ofs << "# Line four is the empty p-code implementation which must be completed for decompiler support\n";
     ofs << "#\n\n";
 
     // sorted instructions
@@ -251,8 +324,10 @@ int createSlaspec(PARSED_DATA& parsedData)
 
         // combinedInstruction.first = the opcode
         // combinedInstruction.second = pointer to the Instruction
-        instructionString = getOutputInstruction(combinedInstruction.second, parsedData);
-        sortedCombinedInstructions.insert({{instructionString, combinedInstruction.second}});
+        instructionString = getOutputInstruction(combinedInstruction.second,
+                                                 parsedData);
+        sortedCombinedInstructions.insert({{instructionString,
+                                            combinedInstruction.second}});
     }
 
     for(auto sortedCombinedInstruction: sortedCombinedInstructions)
@@ -267,7 +342,8 @@ int createSlaspec(PARSED_DATA& parsedData)
             ofs << "# " << sortedCombinedInstruction.second->getOpcode() << "\n";
         }
         
-        if((parsedData.omitExampleInstructions == false) && (sortedCombinedInstruction.second->getCombined() == true))
+        if((parsedData.omitExampleInstructions == false) &&
+           (sortedCombinedInstruction.second->getCombined() == true))
         {
             ofs << "# " << getOriginalOutputString(sortedCombinedInstruction.second, parsedData) << "\n";
         }        
@@ -282,13 +358,15 @@ int createSlaspec(PARSED_DATA& parsedData)
     return 0;
 }
 
-// gets a list of all registers define register section of the processor module
+// Gets a list of all registers define register section of the processor module
 string getOutputRegisters(PARSED_DATA& parsedData)
 {
     string output;
     std::set<string>::iterator it;
 
-    for(it = parsedData.registers.begin(); it != parsedData.registers.end(); ++it)
+    for(it = parsedData.registers.begin();
+        it != parsedData.registers.end();
+        ++it)
     {
         if(it == parsedData.registers.begin())
         {
@@ -302,7 +380,30 @@ string getOutputRegisters(PARSED_DATA& parsedData)
     return output;
 }
 
-// outputs a list of the define token instructions for the processor module
+// Gets a list of instruction mnemonics found
+// only used for debugging purposes
+string getOutputMnemonics(PARSED_DATA& parsedData)
+{
+    string output;
+    std::set<string>::iterator it;
+
+    for(it = parsedData.mnemonics.begin();
+        it != parsedData.mnemonics.end();
+        ++it)
+    {
+        if(it == parsedData.mnemonics.begin())
+        {
+            output += *it;
+        }
+        else
+        {
+            output += " " + *it;
+        }
+    }
+    return output;
+}
+
+// Outputs a list of the define token instructions for the processor module
 // ex:
 //	imm_00_00 = (0, 0)
 //	simm_00_00 = (0, 0) signed
@@ -312,15 +413,17 @@ string getOutputRegisters(PARSED_DATA& parsedData)
 //  regA_04_07 = (4, 7)
 //	regA_05_05 = (5, 5)
 //	regA_05_05_2 = (5, 5)
-string getOutputTokenInstructions(PARSED_DATA& parsedData)
+string getOutputTokenInstructions(set<string>& tokenInstructions)
 {
     string output = "";
     std::set<Instruction*>::iterator it;
 
-    for (auto& token: parsedData.tokenInstructions)
+    for (auto& token: tokenInstructions)
     {
         int start, end;
         vector<string> result;
+
+        //cout << "token: " << token << endl;
 
         boost::split(result, token, boost::is_any_of("_"));
         if(result.size() < 3)
@@ -335,7 +438,8 @@ string getOutputTokenInstructions(PARSED_DATA& parsedData)
         output += "\t" + token + " = (" + to_string(start) + ", " + to_string(end) + ")\n";
 
         // if this was an immediate value, create a signed immediate as well
-        // we do this because we can't tell the difference between an unsigned immediate and a postive signed immediate
+        // we do this because we can't tell the difference between an unsigned
+        // immediate and a postive signed immediate
         if(token.find("imm_") != string::npos)
         {
             output += "\ts" + token + " = (" + to_string(start) + ", " + to_string(end) + ") signed\n";
@@ -345,7 +449,7 @@ string getOutputTokenInstructions(PARSED_DATA& parsedData)
     return output;
 }
 
-// outputs the processor module's attached variables field
+// Outputs the processor module's attached variables field
 // There can be multiple attach variables for a single processor module
 // ex: attach variables [ regA_05_05 regC_05_05_2 regE_05_05_2 ] [
 //         sr vbr
@@ -375,33 +479,70 @@ string getOutputAttachVariables(PARSED_DATA& parsedData)
     return output;
 }
 
-// takes an instruction and converts into SLEIGH format
-// example: ":mov rm_04_07, rn_08_11 is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011"
-string getOutputInstruction(Instruction* instruction, PARSED_DATA& parsedData)
+// Add an export statement in the form of:
+// a0_dup1: a0 is a0 { export a0; }
+// this is required to avoid duplicate registers
+string getOutputDuplicateRegisters(PARSED_DATA& parsedData)
 {
     string output;
 
-    // instruction decorator
-    output += ":";
+    for (auto& x: parsedData.duplicatedRegisters)
+    {
+        string reg = x.first;
+        unsigned int count = x.second;
 
-    output += instruction->getInstructionOutputString(true);
+        if(count <= 1)
+        {
+            // shouldn't ever get here
+            continue;
+        }
 
-    output += " is ";
-
-    output += instruction->getOpcodeOutputString(parsedData.tokenInstructions);
+        for(unsigned int i = 1; i < count; i ++)
+        {
+            output += reg + "_dup" + std::to_string(i) + ": " + reg + " is " + reg + " {export " + reg + ";}\n";
+        }
+    }
 
     return output;
 }
 
-// takes a combined instruction and converts into SLEIGH format, removing the combined pieces
-// it does this by converting all of the non-binary pieces of the opcode into 0s
+// Takes an instruction and converts into SLEIGH format
+// example: ":mov rm_04_07, rn_08_11 is opcode_12_15=0b0110 & rn_08_11 & rm_04_07 & opcode_00_03=0b0011"
+string getOutputInstruction(Instruction* instruction, PARSED_DATA& parsedData)
+{
+    string output;
+    int index = 0;
+
+    // instruction decorator
+    output += ":";
+
+    output += instruction->getInstructionOutputString(true, true);
+
+    output += " is ";
+
+    index = convertOpcodeSizeToIndex(instruction->getOpcode().length());
+    if(index < 0)
+    {
+        cout << "Invalid opcode size!!" << endl;
+        throw 1;
+    }
+
+    output += instruction->getOpcodeOutputString(parsedData.tokenInstructions[index]);
+
+    return output;
+}
+
+// Takes a combined instruction and converts into SLEIGH format, removing the
+// combined pieces. It does this by converting all of the non-binary pieces of
+// the opcode into 0s
 // example: "mov r0, r1"
 string getOriginalOutputString(Instruction* instruction, PARSED_DATA& parsedData)
 {
-    string output;
+    int result = 0;
+    string disassembledString;    
     
     // zeroize the combined opcode string
-    string zeroizedOpcode = instruction->getOpcode();    
+    string zeroizedOpcode = instruction->getOpcode();
     for(unsigned int i = 0; i < zeroizedOpcode.length(); i++)
     {
         if(zeroizedOpcode[i] != '0' && zeroizedOpcode[i] != '1')
@@ -409,22 +550,78 @@ string getOriginalOutputString(Instruction* instruction, PARSED_DATA& parsedData
             zeroizedOpcode[i] = '0';
         }
     }
-        
-    auto itr = parsedData.allInstructions.find(zeroizedOpcode);
-    if(itr == parsedData.allInstructions.end())
-    {
-        cout << "Failed to find zeroized opcode!!" << endl;
-        return "";
-    }    
 
-    return itr->second->getInstructionOutputString(false);
-    //return output;
+    result = disassembleOpcodeFromParsedData(parsedData,
+                                             zeroizedOpcode,
+                                             disassembledString);
+    if(result != 0)
+    {
+        return "";
+    }
+
+    return disassembledString;
 }
 
-// wrapper function for creating the various files required for the processor module
-// parsedData has already been filled out at this point
-int createProcessorModule(PARSED_DATA& parsedData)
+int getOriginalOutputStringFromSla(PARSED_DATA& parsedData,
+                                   string zeroizedOpcode,
+                                   string& disassembledString)
 {
+    int result = 0;
+
+    // loop through all of the loaded .sla files attempting to disassemble
+    // zeroizedOpcode
+    // TODO: improve speed?
+    for(unsigned int i = 0; i < parsedData.slas.size(); i++)
+    {
+        result = parsedData.slas[i].getConstructorTextByBitPattern(zeroizedOpcode,
+                                                                   disassembledString);
+        if(result == 0)
+        {
+            // successfully found the string
+            // cout << "Succeeded " << i << "\n" << disassembledString << endl;
+            return 0;
+        }
+    }
+    
+    // not found in any of the loaded .sla files
+    // cout << "Failed" << endl;
+    return -1;
+}
+
+int disassembleOpcodeFromParsedData(PARSED_DATA& parsedData,
+                                    string zeroizedOpcode,
+                                    string& disassembledString)
+{
+    int result = 0;
+
+    // check through the allInstructions first    
+    auto itr = parsedData.allInstructions.find(zeroizedOpcode);
+    if(itr != parsedData.allInstructions.end())
+    {     
+        disassembledString = itr->second->getInstructionOutputString(false,
+                                                                     false);
+        return 0;        
+    }
+
+    // check through all of the sla files
+    result = getOriginalOutputStringFromSla(parsedData,
+                                            zeroizedOpcode,
+                                            disassembledString);
+    if(result == 0)
+    {
+        return 0;
+    }
+
+    cout << "Failed to find zeroized opcode!!" << endl;
+    cout << zeroizedOpcode << endl;        
+    return -1;
+}
+
+// Wrapper function for creating the various files required for the processor
+// module. parsedData has already been filled out at this point
+int createProcessorModule(PARSED_DATA& parsedData, unsigned int fileId)
+{
+    boost::timer::auto_cpu_timer t;
     int result = 0;
 
     cout << "  [*] Creating Processor Directory Structure" << endl;
@@ -448,13 +645,6 @@ int createProcessorModule(PARSED_DATA& parsedData)
         return result;
     }
 
-    cout << "  [*] Creating .ldefs" << endl;
-    result = createLdefs(parsedData);
-    if(result != 0)
-    {
-        return result;
-    }
-
     cout << "  [*] Creating .pspec" << endl;
     result = createPspec(parsedData);
     if(result != 0)
@@ -463,7 +653,7 @@ int createProcessorModule(PARSED_DATA& parsedData)
     }
 
     cout << "  [*] Creating .slapec" << endl;
-    result = createSlaspec(parsedData);
+    result = createSlaspec(parsedData, fileId);
     if(result != 0)
     {
         return result;
